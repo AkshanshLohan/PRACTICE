@@ -1,0 +1,3 @@
+hi here i am solving a small assignment that how to create a cli using commander library
+in which i am counting the number of lines in this file i will make a command for it
+using commander and then i will provide a file as input and run the command on my terminal and then i will get result in the output
