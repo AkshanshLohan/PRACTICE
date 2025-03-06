@@ -1,42 +1,80 @@
+const bcrypt=require("bcrypt");
 const express=require("express")
 const app=express();
 app.use(express.json());
 const jwt=require("jsonwebtoken");
 const JWT_SECRET="AKSHANSH123";
 const mongoose=require("mongoose");
-mongoose.connect("mongodb+srv://akshanshlohan:<db_password>@akshansh.r0zqn.mongodb.net/todo-akshansh")
-
 const{UserModel,todoModel}=require("./db")
+mongoose.connect("mongodb+srv://akshanshlohan:<db_password>@akshansh.r0zqn.mongodb.net/todo-akshansh")
+const {z}=require("zod")
+
+
 
 app.post("/signup",async function(req,res){
+
+    //input validation
+    const requiredBody=z.object({
+        email : z.string().min(3).max(100).email(),
+        password: z.string().min(3).max(100),
+        name: z.string().min(3).max(30)
+    })
+
+    const parsedDataWithSuccess=requiredBody.safeParse(req.body);
+    //1. how to show user the exact error
+
+    if(!parsedDataWithSuccess.success){
+        res.json({
+            message:"incorrect format"
+        })
+        return
+    }
      const email=req.body.email;
      const password=req.body.password;
      const name=req.body.name;
-
-    await UserModel.create({
-        email :email,
-        password: password,
-        name: name
-     })
-
+     
+     let errorthrown=false;
+    try{
+        errorthrown=true;
+        const hashedpassword=await bcrypt.hash(password,5);
+        console.log(hashedpassword)
+   
+       await UserModel.create({
+           email :email,
+           password: hashedpassword,
+           name: name
+        })
+        throw new Error("user already exists")
+    } 
+    catch(e){
+        res.json({
+            message:"user already exists"
+        })
+    }
+    if(!errorthrown){
      res.json({
         message: "you are logged in"
      })
+    }
 })
 app.post("/signin",async function(req,res){
     const email=req.body.email;
     const password=req.body.password;
-    const name=req.body.name;
 
-     const user=await UserModel.create({
+     const response=await UserModel.findOne({
            email: email,
-           password: password,
-           name:name
         })
+        if(!response){
+            res.status(403).json({
+                message:"user does not exist in our database"
+            })
+            return
+        }
+        const passwordMatch=await bcrypt.compare(password,response.password);
 
-        if(user){
+        if(passwordMatch){
             const token=jwt.sign({
-                id: user._id.toString()
+                id: response._id.toString()
             },JWT_SECRET);
             res.json({
                token: token
