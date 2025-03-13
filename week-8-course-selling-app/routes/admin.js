@@ -3,25 +3,50 @@ const adminRouter=Router();
 const {adminModel, courseModel}=require("../db");
 const jwt=require("jsonwebtoken");
 const {adminMiddleware}=require("../middlewares/admin")
+const {z}=require("zod");
 
 adminRouter.post("/signup",async function(req,res){
     const { email,password,firstName,lastName }=req.body;
       //TODO: adding zod validation
-      //TODO: hash the password so plaintext is not stored in db
-      
-      //TODO: put inside a try catch block
-         await adminModel.create({
-          email: email,
-          password: password,
-          firstName: firstName,
-          lastName: lastName
-         })
-        
-      
-  
+      const requiredBody=z.object({
+        email: z.email().max(10).min(3),
+        password: z.string().max(10).min(3),
+        firstName: z.string(),
+        lastName:z.string()
+      })
+      const parsedData=requiredBody.safeParse(req.body);
+      if(!parsedData.success){
         res.json({
-             message: "signup succeded"
+            msg:"incorrect format"
         })
+        return
+      }
+      //TODO: hash the password so plaintext is not stored in db
+
+      try {
+        const existingUser = await adminModel.findOne({ email: email });
+    
+        if (existingUser){
+            return res.json({ message: "User already exists" });
+        }
+    
+        const hashedPassword = await bcrypt.hash(password, 5);
+        console.log(hashedPassword); 
+    
+        await adminModel.create({
+            email: email,
+            password: hashedPassword,
+            name: name
+        });
+    
+        res.json({ message: "You are registered and logged in" });
+    
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: "An error occurred, please try again later." });
+    }
+    
+
 })
 adminRouter.post("/signin",async function(req,res){
     const { email,password }=req.body;

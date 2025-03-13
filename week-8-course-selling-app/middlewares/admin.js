@@ -7,7 +7,7 @@ function adminMiddleware(req,res,next){
     const decoded=jwt.verify(token,JWT_ADMIN_PASSWORD);
 
     if(decoded){
-        req.adminId=decoded,id;
+        req.adminId=decoded.id;
         next();
     }
     else{
